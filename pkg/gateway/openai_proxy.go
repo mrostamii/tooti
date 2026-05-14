@@ -38,6 +38,7 @@ type OpenAIProxy struct {
 	prepaidTopupPaywall *X402PaywallConfig
 	prepaidTokenPricing *X402TokenPricingConfig
 	prepaidModelPricing map[string]X402TokenPricingConfig
+	corsAllowedOrigins  []string
 }
 
 const maxRemoteRetries = 2
@@ -150,6 +151,12 @@ func (p *OpenAIProxy) SetPeerLatencyFunc(fn PeerLatencyFunc) {
 	p.peerLatency = fn
 }
 
+// SetCORSAllowedOrigins sets exact browser Origin values allowed for GET/OPTIONS on
+// /health, /v1/models, and /v1/network/nodes. Empty disables this middleware.
+func (p *OpenAIProxy) SetCORSAllowedOrigins(origins []string) {
+	p.corsAllowedOrigins = append([]string(nil), origins...)
+}
+
 func (p *OpenAIProxy) SetTimeouts(firstToken, total time.Duration) {
 	if firstToken > 0 {
 		p.firstTokenTimeout = firstToken
@@ -183,9 +190,14 @@ func (p *OpenAIProxy) Run(ctx context.Context) error {
 		mux.HandleFunc("GET /v1/network/nodes", p.handleNetworkNodes)
 	}
 
+	handler := http.Handler(mux)
+	if len(p.corsAllowedOrigins) > 0 {
+		handler = explorerCORSMiddleware(p.corsAllowedOrigins, mux)
+	}
+
 	srv := &http.Server{
 		Addr:              p.listenAddr,
-		Handler:           mux,
+		Handler:           handler,
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 

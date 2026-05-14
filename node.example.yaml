@@ -71,6 +71,11 @@ gateway:
   control_api_token: ""
   # off | optional | required (mainly used for official gateways)
   auth_mode: "off"
+  # Optional. When set, browsers at these exact Origins may call GET /v1/network/nodes
+  # and GET /v1/models cross-origin (Cloudflare Pages explorer on tooti.network).
+  # cors_allowed_origins:
+  #   - "https://tooti.network"
+  #   - "http://localhost:5173"
   telemetry:
     # Outbound usage telemetry upload (mainly for community gateways).
     enabled: false

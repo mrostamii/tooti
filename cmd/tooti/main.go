@@ -329,6 +329,7 @@ func runGatewayStart(args []string) {
 	proxy.SetGatewayMode(cfg.Gateway.Mode)
 	proxy.SetControlAPIToken(cfg.Gateway.ControlAPIToken)
 	proxy.SetAuthMode(cfg.Gateway.AuthMode)
+	proxy.SetCORSAllowedOrigins(cfg.Gateway.CORSAllowedOrigins)
 	resolvedX402PayTo := strings.TrimSpace(*x402PayTo)
 	if resolvedX402PayTo == "" {
 		resolvedX402PayTo = strings.TrimSpace(cfg.Node.X402.PayTo)

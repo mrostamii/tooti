@@ -92,7 +92,7 @@ type Config struct {
 		ControlAPIToken string `yaml:"control_api_token"`
 		// AuthMode controls API key behavior for hosted gateways.
 		// Allowed: off | optional | required
-		AuthMode string `yaml:"auth_mode"`
+		AuthMode  string `yaml:"auth_mode"`
 		Telemetry struct {
 			Enabled          bool   `yaml:"enabled"`
 			Endpoint         string `yaml:"endpoint"`
@@ -116,6 +116,9 @@ type Config struct {
 		X402 struct {
 			ModelPricing map[string]X402ModelPricing `yaml:"model_pricing"`
 		} `yaml:"x402"`
+		// CORSAllowedOrigins lists exact browser Origin values (e.g. https://tooti.network)
+		// allowed for GET/OPTIONS on /health, /v1/models, and /v1/network/nodes.
+		CORSAllowedOrigins []string `yaml:"cors_allowed_origins"`
 	} `yaml:"gateway"`
 }
 
