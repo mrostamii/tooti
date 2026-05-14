@@ -1,7 +1,9 @@
 package gateway
 
 import (
+	"net"
 	"net/http"
+	"net/url"
 	"strings"
 )
 
@@ -11,11 +13,14 @@ import (
 func explorerCORSMiddleware(allowedOrigins []string, next http.Handler) http.Handler {
 	allowed := make(map[string]struct{}, len(allowedOrigins))
 	for _, o := range allowedOrigins {
-		o = strings.TrimSpace(o)
-		if o == "" {
+		normalized := normalizeOrigin(o)
+		if normalized == "" {
 			continue
 		}
-		allowed[o] = struct{}{}
+		allowed[normalized] = struct{}{}
+		for _, alias := range loopbackAliases(normalized) {
+			allowed[alias] = struct{}{}
+		}
 	}
 	if len(allowed) == 0 {
 		return next
@@ -25,7 +30,7 @@ func explorerCORSMiddleware(allowedOrigins []string, next http.Handler) http.Han
 			next.ServeHTTP(w, r)
 			return
 		}
-		origin := strings.TrimSpace(r.Header.Get("Origin"))
+		origin := normalizeOrigin(r.Header.Get("Origin"))
 		if origin == "" {
 			next.ServeHTTP(w, r)
 			return
@@ -53,4 +58,50 @@ func explorerCORSPath(path string) bool {
 	default:
 		return false
 	}
+}
+
+func normalizeOrigin(raw string) string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return ""
+	}
+	u, err := url.Parse(raw)
+	if err != nil {
+		return ""
+	}
+	if u.Scheme == "" || u.Host == "" {
+		return ""
+	}
+	host := strings.ToLower(strings.TrimSpace(u.Host))
+	scheme := strings.ToLower(strings.TrimSpace(u.Scheme))
+	return scheme + "://" + host
+}
+
+func loopbackAliases(origin string) []string {
+	u, err := url.Parse(origin)
+	if err != nil || u.Host == "" {
+		return nil
+	}
+	host := u.Hostname()
+	if host == "" {
+		return nil
+	}
+	port := u.Port()
+	switch host {
+	case "localhost", "127.0.0.1", "::1":
+	default:
+		return nil
+	}
+	candidates := []string{"localhost", "127.0.0.1", "::1"}
+	out := make([]string, 0, len(candidates))
+	for _, c := range candidates {
+		h := c
+		if port != "" {
+			h = net.JoinHostPort(h, port)
+		} else if strings.Contains(h, ":") {
+			h = "[" + h + "]"
+		}
+		out = append(out, u.Scheme+"://"+h)
+	}
+	return out
 }

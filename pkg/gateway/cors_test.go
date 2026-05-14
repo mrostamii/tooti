@@ -12,7 +12,7 @@ func TestExplorerCORSMiddleware(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(`{"ok":true}`))
 	})
-	h := explorerCORSMiddleware([]string{"https://tooti.network", "http://localhost:5173"}, next)
+	h := explorerCORSMiddleware([]string{"https://tooti.network", "http://localhost:5173/"}, next)
 
 	t.Run("OPTIONS allowed origin", func(t *testing.T) {
 		t.Parallel()
@@ -45,6 +45,22 @@ func TestExplorerCORSMiddleware(t *testing.T) {
 			t.Fatalf("status=%d", res.StatusCode)
 		}
 		if got := res.Header.Get("Access-Control-Allow-Origin"); got != "http://localhost:5173" {
+			t.Fatalf("ACAO=%q", got)
+		}
+	})
+
+	t.Run("loopback alias allows localhost and 127.0.0.1", func(t *testing.T) {
+		t.Parallel()
+		req := httptest.NewRequest(http.MethodGet, "/v1/network/nodes", nil)
+		req.Header.Set("Origin", "http://127.0.0.1:5173")
+		rr := httptest.NewRecorder()
+		h.ServeHTTP(rr, req)
+		res := rr.Result()
+		defer res.Body.Close()
+		if res.StatusCode != http.StatusOK {
+			t.Fatalf("status=%d", res.StatusCode)
+		}
+		if got := res.Header.Get("Access-Control-Allow-Origin"); got != "http://127.0.0.1:5173" {
 			t.Fatalf("ACAO=%q", got)
 		}
 	})
